@@ -1,0 +1,36 @@
+services:
+  scraper:
+    build:
+      context: .
+      args:
+        WITH_BROWSER: ${WITH_BROWSER:-0}   # set to 1 in .env to enable JS rendering (bigger image)
+    environment:
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+    # No login is built in, so this is bound to the server's own loopback: NOT reachable from the internet.
+    # Reach it through an SSH tunnel (see notes) or put an HTTPS reverse proxy in front.
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+  # --- Optional: public HTTPS with a domain name (Caddy gets the certificate automatically) ---
+  # 1. Point a DNS A record (e.g. scrape.example.com) at your server's IP
+  # 2. Set TRUST_PROXY=1 in .env  (note: the app has no login, so anyone who finds the URL can use it)
+  # 3. Uncomment this service and create a file named Caddyfile containing:
+  #       scrape.example.com {
+  #           reverse_proxy scraper:8000
+  #       }
+  #
+  # caddy:
+  #   image: caddy:2
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #   depends_on:
+  #     - scraper
+  #   restart: unless-stopped
+  #
+# volumes:
+#   caddy_data:
