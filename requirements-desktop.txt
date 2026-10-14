@@ -1,0 +1,5 @@
+flask>=3.0
+requests>=2.31
+beautifulsoup4>=4.12
+yt-dlp>=2025.1.1
+pyinstaller>=6.0
