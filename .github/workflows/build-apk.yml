@@ -1,0 +1,25 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:        # run manually from the Actions tab
+  push:
+    tags: ["v*"]
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build APK with Buildozer
+        id: buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        with:
+          command: buildozer android debug
+          buildozer_version: stable
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VideoScraper-apk
+          path: ${{ steps.buildozer.outputs.filename }}
