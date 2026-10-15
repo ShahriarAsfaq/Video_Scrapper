@@ -6,7 +6,7 @@ on:
     tags: ["v*"]
 
 env:
-  CACHE_VERSION: v1         # bump this (v2, v3...) to force a completely clean build
+  CACHE_VERSION: v2         # bump this (v3, v4...) to force a completely clean build
 
 jobs:
   apk:
@@ -55,6 +55,13 @@ jobs:
           key: buildozer-${{ env.CACHE_VERSION }}-${{ github.run_id }}
           restore-keys: |
             buildozer-${{ env.CACHE_VERSION }}-
+
+      # Reusing a cached copy of these generated folders can leave a half-upgraded pip behind.
+      # They are rebuilt in seconds; the slow compiled parts (Python, Kivy, SDL) stay cached.
+      - name: Clear stale python-for-android state
+        run: |
+          P=.buildozer/android/platform/build-arm64-v8a
+          rm -rf "$P/build/venv" "$P/build/python-installs" "$P/dists"
 
       - name: Build APK
         run: buildozer -v android debug
