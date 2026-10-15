@@ -1,16 +1,16 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:        # run manually from the Actions tab
   push:
     tags: ["v*"]
 
 env:
-  CACHE_VERSION: v1
+  CACHE_VERSION: v1         # bump this (v2, v3...) to force a completely clean build
 
 jobs:
   apk:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04   # pinned: newer images dropped packages Buildozer needs
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -35,19 +35,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install buildozer "Cython==0.29.37" virtualenv
 
+      # python-for-android's own pip step breaks on Android-specific wheels from PyPI, so the
+      # pure-Python dependencies are bundled into ./vendor instead and shipped with the app.
+      - name: Bundle pure-Python dependencies
+        run: |
+          pip install --no-compile --no-deps --target vendor \
+            --no-binary charset-normalizer,markupsafe \
+            flask werkzeug jinja2 markupsafe itsdangerous click blinker \
+            requests urllib3 idna charset-normalizer certifi \
+            beautifulsoup4 soupsieve typing_extensions yt-dlp
+
+      # Saved even when the build FAILS (see the save step), so a re-run resumes where it stopped.
       - name: Restore Buildozer cache
         uses: actions/cache/restore@v4
         with:
           path: |
             ~/.buildozer
             .buildozer
-          key: buildozer-${{ env.CACHE_VERSION }}-${{ hashFiles('buildozer.spec') }}-${{ github.run_id }}
+          key: buildozer-${{ env.CACHE_VERSION }}-${{ github.run_id }}
           restore-keys: |
-            buildozer-${{ env.CACHE_VERSION }}-${{ hashFiles('buildozer.spec') }}-
+            buildozer-${{ env.CACHE_VERSION }}-
 
       - name: Build APK
-        env:
-          PIP_NO_BINARY: "charset-normalizer,markupsafe"
         run: buildozer -v android debug
 
       - name: Save Buildozer cache
@@ -57,7 +66,7 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: buildozer-${{ env.CACHE_VERSION }}-${{ hashFiles('buildozer.spec') }}-${{ github.run_id }}
+          key: buildozer-${{ env.CACHE_VERSION }}-${{ github.run_id }}
 
       - uses: actions/upload-artifact@v4
         with:
