@@ -8,8 +8,12 @@ Downloads folder. Keep this app open (or in recents) while downloading.
 
 import os
 import socket
+import sys
 import tempfile
 import threading
+
+# Pure-Python dependencies are bundled in ./vendor by the build workflow
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor"))
 
 PORT = 5000
 URL = f"http://127.0.0.1:{PORT}"

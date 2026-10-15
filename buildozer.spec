@@ -4,14 +4,15 @@ package.name = videoscraper
 package.domain = org.videoscraper
 
 source.dir = .
-source.include_exts = py
+source.include_exts = py,pem
 source.exclude_patterns = desktop.py
 source.exclude_dirs = .github, venv, __pycache__, dist, build, bin, .buildozer
 
 version = 0.1
 
-# python-for-android installs with --no-deps, so every dependency is listed explicitly
-requirements = python3,kivy,pyjnius,android,openssl,flask,werkzeug,jinja2,markupsafe,itsdangerous,click,blinker,requests,urllib3,idna,charset-normalizer,certifi,beautifulsoup4,soupsieve,typing_extensions,yt-dlp
+# Pure-Python packages (flask, requests, yt-dlp, ...) are NOT listed here: the CI workflow bundles
+# them into ./vendor, which sidesteps python-for-android's pip step.
+requirements = python3,kivy,pyjnius,android,openssl
 
 orientation = portrait
 fullscreen = 0

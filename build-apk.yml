@@ -5,21 +5,70 @@ on:
   push:
     tags: ["v*"]
 
+env:
+  CACHE_VERSION: v1         # bump this (v2, v3...) to force a completely clean build
+
 jobs:
   apk:
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
+    runs-on: ubuntu-22.04   # pinned: newer images dropped packages Buildozer needs
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build APK with Buildozer
-        id: buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
+      - uses: actions/setup-python@v5
         with:
-          command: buildozer android debug
-          buildozer_version: stable
+          python-version: "3.11"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          pip install buildozer "Cython==0.29.37" virtualenv
+
+      # python-for-android's own pip step breaks on Android-specific wheels from PyPI, so the
+      # pure-Python dependencies are bundled into ./vendor instead and shipped with the app.
+      - name: Bundle pure-Python dependencies
+        run: |
+          pip install --no-compile --no-deps --target vendor \
+            --no-binary charset-normalizer,markupsafe \
+            flask werkzeug jinja2 markupsafe itsdangerous click blinker \
+            requests urllib3 idna charset-normalizer certifi \
+            beautifulsoup4 soupsieve typing_extensions yt-dlp
+
+      # Saved even when the build FAILS (see the save step), so a re-run resumes where it stopped.
+      - name: Restore Buildozer cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.buildozer
+            .buildozer
+          key: buildozer-${{ env.CACHE_VERSION }}-${{ github.run_id }}
+          restore-keys: |
+            buildozer-${{ env.CACHE_VERSION }}-
+
+      - name: Build APK
+        run: buildozer -v android debug
+
+      - name: Save Buildozer cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.buildozer
+            .buildozer
+          key: buildozer-${{ env.CACHE_VERSION }}-${{ github.run_id }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: VideoScraper-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
