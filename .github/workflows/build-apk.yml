@@ -5,6 +5,9 @@ on:
   push:
     tags: ["v*"]
 
+env:
+  CACHE_VERSION: v1
+
 jobs:
   apk:
     runs-on: ubuntu-22.04
@@ -32,17 +35,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install buildozer "Cython==0.29.37" virtualenv
 
-      - name: Cache Buildozer downloads
-        uses: actions/cache@v4
+      - name: Restore Buildozer cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.buildozer
             .buildozer
-          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
-          restore-keys: buildozer-${{ runner.os }}-
+          key: buildozer-${{ env.CACHE_VERSION }}-${{ hashFiles('buildozer.spec') }}-${{ github.run_id }}
+          restore-keys: |
+            buildozer-${{ env.CACHE_VERSION }}-${{ hashFiles('buildozer.spec') }}-
 
       - name: Build APK
+        env:
+          PIP_NO_BINARY: "charset-normalizer,markupsafe"
         run: buildozer -v android debug
+
+      - name: Save Buildozer cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.buildozer
+            .buildozer
+          key: buildozer-${{ env.CACHE_VERSION }}-${{ hashFiles('buildozer.spec') }}-${{ github.run_id }}
 
       - uses: actions/upload-artifact@v4
         with:
